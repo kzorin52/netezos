@@ -1,115 +1,93 @@
 ﻿using Netezos.Encoding;
 using Netezos.Utils;
 
-namespace Netezos.Keys
+namespace Netezos.Keys;
+
+public class PubKey
 {
-    public class PubKey
+    internal readonly Curve Curve;
+    internal readonly byte[] Data;
+    private string? _Address;
+
+    internal PubKey(in byte[] bytes, ECKind kind)
     {
-        public string Address
-        {
-            get
-            {
-                if (_Address == null)
-                {
-                    using (Store.Unlock())
-                    {
-                        _Address = Base58.Convert(Blake2b.GetDigest(Store.Data, 160), Curve.AddressPrefix);
-                    }
-                }
-                return _Address;
-            }
-        }
-        string? _Address;
+        if ((kind == ECKind.Ed25519 && bytes.Length != 32) ||
+            (kind == ECKind.Secp256k1 && bytes.Length != 33) ||
+            (kind == ECKind.NistP256 && bytes.Length != 33) ||
+            (kind == ECKind.Bls12381 && bytes.Length != 48))
+            throw new ArgumentException("Invalid public key length", nameof(bytes));
 
-        internal readonly Curve Curve;
-        internal readonly ISecretStore Store;
-
-        internal PubKey(byte[] bytes, ECKind kind, bool flush = false)
-        {
-            if (kind == ECKind.Ed25519 && bytes.Length != 32 ||
-                kind == ECKind.Secp256k1 && bytes.Length != 33 ||
-                kind == ECKind.NistP256 && bytes.Length != 33 ||
-                kind == ECKind.Bls12381 && bytes.Length != 48)
-                throw new ArgumentException("Invalid public key length", nameof(bytes));
-
-            Curve = Curve.FromKind(kind);
-            Store = new PlainSecretStore(bytes);
-            if (flush) bytes.Flush();
-        }
-
-        public byte[] GetBytes()
-        {
-            using (Store.Unlock())
-            {
-                var bytes = new byte[Store.Data.Length];
-                Buffer.BlockCopy(Store.Data, 0, bytes, 0, Store.Data.Length);
-                return bytes;
-            }
-        }
-
-        public string GetBase58()
-        {
-            using (Store.Unlock())
-            {
-                return Base58.Convert(Store.Data, Curve.PublicKeyPrefix);
-
-            }
-        }
-
-        public string GetHex()
-        {
-            using (Store.Unlock())
-            {
-                return Hex.Convert(Store.Data);
-            }
-        }
-
-        public bool Verify(byte[] data, byte[] signature)
-        {
-            using (Store.Unlock())
-            {
-                return Curve.Verify(data, signature, Store.Data);
-            }
-        }
-
-        public bool Verify(byte[] data, string signature)
-        {
-            using (Store.Unlock())
-            {
-                return Base58.TryParse(signature, Curve.SignaturePrefix, out var signatureBytes) 
-                    && Curve.Verify(data, signatureBytes, Store.Data);
-            }
-        }
-
-        public bool Verify(string message, string signature)
-        {
-            using (Store.Unlock())
-            {
-                return Utf8.TryParse(message, out var messageBytes) 
-                    && Base58.TryParse(signature, Curve.SignaturePrefix, out var signatureBytes) 
-                    && Curve.Verify(messageBytes, signatureBytes, Store.Data);
-            }
-        }
-
-        public override string ToString() => GetBase58();
-
-        #region static
-        public static PubKey FromBytes(byte[] bytes, ECKind kind = ECKind.Ed25519)
-            => new(bytes, kind);
-
-        public static PubKey FromHex(string hex, ECKind kind = ECKind.Ed25519)
-            => new(Hex.Parse(hex), kind, true);
-
-        public static PubKey FromBase64(string base64, ECKind kind = ECKind.Ed25519)
-            => new(Base64.Parse(base64), kind, true);
-
-        public static PubKey FromBase58(string base58)
-        {
-            var curve = Curve.FromPublicKeyBase58(base58);
-            var bytes = Base58.Parse(base58, curve.PublicKeyPrefix);
-
-            return new PubKey(bytes, curve.Kind, true);
-        }
-        #endregion
+        Curve = Curve.FromKind(kind);
+        Data = bytes;
     }
+
+    public string Address
+    {
+        get { return _Address ??= Base58.Convert(Blake2b.GetDigest(Data, 160), Curve.AddressPrefix); }
+    }
+
+    public byte[] GetBytes()
+    {
+        return Data;
+    }
+
+    public string GetBase58()
+    {
+        return Base58.Convert(Data, Curve.PublicKeyPrefix);
+    }
+
+    public string GetHex()
+    {
+        return Hex.Convert(Data);
+    }
+
+    public bool Verify(byte[] data, byte[] signature)
+    {
+        return Curve.Verify(data, signature, Data);
+    }
+
+    public bool Verify(byte[] data, string signature)
+    {
+        return Base58.TryParse(signature, Curve.SignaturePrefix, out var signatureBytes)
+               && Curve.Verify(data, signatureBytes, Data);
+    }
+
+    public bool Verify(string message, string signature)
+    {
+        return Utf8.TryParse(message, out var messageBytes)
+               && Base58.TryParse(signature, Curve.SignaturePrefix, out var signatureBytes)
+               && Curve.Verify(messageBytes, signatureBytes, Data);
+    }
+
+    public override string ToString()
+    {
+        return GetBase58();
+    }
+
+    #region static
+
+    public static PubKey FromBytes(byte[] bytes, ECKind kind = ECKind.Ed25519)
+    {
+        return new PubKey(bytes, kind);
+    }
+
+    public static PubKey FromHex(string hex, ECKind kind = ECKind.Ed25519)
+    {
+        return new PubKey(Hex.Parse(hex), kind);
+    }
+
+    public static PubKey FromBase64(string base64, ECKind kind = ECKind.Ed25519)
+    {
+        return new PubKey(Base64.Parse(base64), kind);
+    }
+
+    public static PubKey FromBase58(string base58)
+    {
+        var curve = Curve.FromPublicKeyBase58(base58);
+        var bytes = Base58.Parse(base58, curve.PublicKeyPrefix);
+
+        return new PubKey(bytes, curve.Kind);
+    }
+
+    #endregion
 }

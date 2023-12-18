@@ -1,4 +1,6 @@
-﻿namespace Netezos.Keys
+﻿using Org.BouncyCastle.Asn1.X9;
+
+namespace Netezos.Keys
 {
     abstract class Curve
     {
@@ -39,7 +41,7 @@
             _ => throw new ArgumentException("Invalid prefix"),
         };
 
-        public static Curve FromPrivateKeyBase58(string base58) => base58.Substring(0, 4) switch
+        public static Curve FromPrivateKeyBase58(string base58) => base58[..4] switch
         {
             "edsk" => new Ed25519(),
             "spsk" => new Secp256k1(),
@@ -48,7 +50,7 @@
             _ => throw new ArgumentException("Invalid private key prefix"),
         };
 
-        public static Curve FromPublicKeyBase58(string base58) => base58.Substring(0, 4) switch
+        public static Curve FromPublicKeyBase58(string base58) => base58[..4] switch
         {
             "edpk" => new Ed25519(),
             "sppk" => new Secp256k1(),

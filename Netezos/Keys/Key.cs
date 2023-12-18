@@ -7,80 +7,48 @@ namespace Netezos.Keys
         public string Address => PubKey.Address;
         public PubKey PubKey
         {
-            get
-            {
-                if (_PubKey == null)
-                {
-                    using (Store.Unlock())
-                    {
-                        _PubKey = new PubKey(Curve.GetPublicKey(Store.Data), Curve.Kind, true);
-                    }
-                }
-                return _PubKey;
-            }
+            get { return _PubKey ??= new PubKey(Curve.GetPublicKey(Data), Curve.Kind); }
         }
         PubKey? _PubKey;
 
         internal readonly Curve Curve;
-        internal readonly ISecretStore Store;
+        internal readonly byte[] Data;
 
         public Key(ECKind kind = ECKind.Ed25519)
         {
             Curve = Curve.FromKind(kind);
-            var pk = Curve.GeneratePrivateKey();
-            Store = new PlainSecretStore(pk);
-            pk.Flush();
+            Data = Curve.GeneratePrivateKey();
         }
 
-        internal Key(byte[] bytes, ECKind kind, bool flush = false)
+        internal Key(byte[] bytes, ECKind kind)
         {
             Curve = Curve.FromKind(kind);
-            var pk = Curve.ExtractPrivateKey(bytes ?? throw new ArgumentNullException(nameof(bytes)));
-            Store = new PlainSecretStore(pk);
-            pk.Flush();
-            if (flush) bytes.Flush();
+            Data = Curve.ExtractPrivateKey(bytes ?? throw new ArgumentNullException(nameof(bytes)));
         }
 
         public byte[] GetBytes()
         {
-            using (Store.Unlock())
-            {
-                var bytes = new byte[Store.Data.Length];
-                Buffer.BlockCopy(Store.Data, 0, bytes, 0, Store.Data.Length);
-                return bytes;
-            }
+            return Data;
         }
 
         public string GetBase58()
         {
-            using (Store.Unlock())
-            {
-                return Base58.Convert(Store.Data, Curve.PrivateKeyPrefix);
-            }
+            return Base58.Convert(Data, Curve.PrivateKeyPrefix);
         }
 
         public string GetHex()
         {
-            using (Store.Unlock())
-            {
-                return Hex.Convert(Store.Data);
-            }
+            return Hex.Convert(Data);
         }
 
         public Signature Sign(byte[] bytes)
         {
-            using (Store.Unlock())
-            {
-                return Curve.Sign(bytes, Store.Data);
-            }
+            return Curve.Sign(bytes, Data);
         }
 
         public Signature Sign(string message)
         {
-            using (Store.Unlock())
-            {
-                return Curve.Sign(Utf8.Parse(message), Store.Data);
-            }
+            return Curve.Sign(Utf8.Parse(message), Data);
         }
 
         /// <summary>
@@ -90,11 +58,10 @@ namespace Netezos.Keys
         /// <returns></returns>
         public Signature SignOperation(byte[] bytes)
         {
-            using (Store.Unlock())
-            {
-                return Curve.Sign(new byte[] { 3 }.Concat(bytes), Store.Data);
-            }
+            // bruh man... every call new array and allocation. Big brain?
+            return Curve.Sign(ForSign.Concat(bytes), Data);
         }
+        private static readonly byte[] ForSign = [0x3];
 
         public bool Verify(byte[] data, byte[] signature) => PubKey.Verify(data, signature);
 
@@ -107,10 +74,10 @@ namespace Netezos.Keys
             => new(bytes, kind);
 
         public static Key FromHex(string hex, ECKind kind = ECKind.Ed25519)
-            => new(Hex.Parse(hex), kind, true);
+            => new(Hex.Parse(hex), kind);
 
         public static Key FromBase64(string base64, ECKind kind = ECKind.Ed25519)
-            => new(Base64.Parse(base64), kind, true);
+            => new(Base64.Parse(base64), kind);
 
         public static Key FromBase58(string base58)
         {
@@ -123,30 +90,27 @@ namespace Netezos.Keys
             var curve = Curve.FromPrivateKeyBase58(base58);
             var bytes = Base58.Parse(base58, curve.PrivateKeyPrefix);
 
-            return new(bytes, curve.Kind, true);
+            return new(bytes, curve.Kind);
         }
 
         public static Key FromMnemonic(Mnemonic mnemonic)
         {
             var seed = mnemonic.GetSeed();
-            var key = new Key(seed.GetBytes(0, 32), ECKind.Ed25519, true);
-            seed.Flush();
+            var key = new Key(seed.GetBytes(0, 32), ECKind.Ed25519);
             return key;
         }
 
         public static Key FromMnemonic(Mnemonic mnemonic, string email, string password)
         {
             var seed = mnemonic.GetSeed($"{email}{password}");
-            var key = new Key(seed.GetBytes(0, 32), ECKind.Ed25519, true);
-            seed.Flush();
+            var key = new Key(seed.GetBytes(0, 32), ECKind.Ed25519);
             return key;
         }
 
         public static Key FromMnemonic(Mnemonic mnemonic, string passphrase, ECKind kind = ECKind.Ed25519)
         {
             var seed = mnemonic.GetSeed(passphrase);
-            var key = new Key(seed.GetBytes(0, 32), kind, true);
-            seed.Flush();
+            var key = new Key(seed.GetBytes(0, 32), kind);
             return key;
         }
         #endregion

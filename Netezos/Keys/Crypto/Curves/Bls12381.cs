@@ -1,4 +1,6 @@
-﻿namespace Netezos.Keys
+﻿using Org.BouncyCastle.Asn1.X9;
+
+namespace Netezos.Keys
 {
     class Bls12381 : Curve
     {

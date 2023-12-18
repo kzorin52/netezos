@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<LangVersion>latest</LangVersion>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>preview</LangVersion>
+		<TargetFramework>netstandard2.1</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
@@ -24,15 +24,15 @@
 		<Version>2.8.0</Version>
 		<Copyright>Copyright © Baking Bad 2019-2023</Copyright>
 	</PropertyGroup>
-	
+
 	<ItemGroup>
 		<None Include="../icon.png" Pack="true" PackagePath="/" />
 		<None Include="../README.md" Pack="true" PackagePath="/" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="BouncyCastle.Cryptography" Version="2.2.1" />
 		<PackageReference Include="Dynamic.Json" Version="1.4.0" />
-		<PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
 	</ItemGroup>
 
 </Project>

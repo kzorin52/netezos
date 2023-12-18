@@ -2,13 +2,14 @@
 using Org.BouncyCastle.Crypto.Signers;
 using BcEd25519 = Org.BouncyCastle.Math.EC.Rfc8032.Ed25519;
 using Netezos.Utils;
+using Org.BouncyCastle.Asn1.X9;
 
 namespace Netezos.Keys
 {
     class Ed25519 : Curve
     {
         #region static
-        static readonly byte[] _Slip10Seed = { 101, 100, 50, 53, 53, 49, 57, 32, 115, 101, 101, 100 }; // "ed25519 seed"
+        private static readonly byte[] _Slip10Seed = "ed25519 seed"u8.ToArray(); // "ed25519 seed"
         #endregion
         
         public override ECKind Kind => ECKind.Ed25519;
@@ -36,7 +37,6 @@ namespace Netezos.Keys
         {
             var publicKey = new byte[32];
             BcEd25519.GeneratePublicKey(privateKey, 0, publicKey, 0);
-
             return publicKey;
         }
 

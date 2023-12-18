@@ -23,21 +23,19 @@ namespace Netezos.Keys
 
                 if (curve.Kind == ECKind.Ed25519)
                 {
-                    l.Flush();
                     return (ll, lr);
                 }
 
                 var parse256LL = new BigInteger(1, ll);
                 var N = curve.Kind switch
                 {
-                    ECKind.Secp256k1 => SecNamedCurves.GetByName("secp256k1").N,
-                    ECKind.NistP256 => SecNamedCurves.GetByName("secp256r1").N,
+                    ECKind.Secp256k1 => Secp256k1.Curve.N,
+                    ECKind.NistP256 => NistP256.Curve.N,
                     _ => throw new InvalidEnumArgumentException()
                 };
                 
                 if (parse256LL.CompareTo(N) < 0 && parse256LL.CompareTo(BigInteger.Zero) != 0)
                 {
-                    l.Flush();
                     return (ll, lr);
                 }
 
@@ -69,7 +67,6 @@ namespace Netezos.Keys
 
             if (curve.Kind == ECKind.Ed25519)
             {
-                l.Flush();
                 return (ll, lr);
             }
 
@@ -79,8 +76,8 @@ namespace Netezos.Keys
                 var kPar = new BigInteger(1, privateKey);
                 var N = curve.Kind switch
                 {
-                    ECKind.Secp256k1 => SecNamedCurves.GetByName("secp256k1").N,
-                    ECKind.NistP256 => SecNamedCurves.GetByName("secp256r1").N,
+                    ECKind.Secp256k1 => Secp256k1.Curve.N,
+                    ECKind.NistP256 => NistP256.Curve.N,
                     _ => throw new InvalidEnumArgumentException()
                 };
                 var key = parse256LL.Add(kPar).Mod(N);
@@ -98,11 +95,8 @@ namespace Netezos.Keys
                 {
                     var kb = keyBytes;
                     keyBytes = new byte[32 - kb.Length].Concat(kb);
-                    kb.Flush();
                 }
 
-                l.Flush();
-                ll.Flush();
                 return (keyBytes, lr);
             }
         }
@@ -123,8 +117,8 @@ namespace Netezos.Keys
 
             var c = curve.Kind switch
             {
-                ECKind.Secp256k1 => SecNamedCurves.GetByName("secp256k1"),
-                ECKind.NistP256 => SecNamedCurves.GetByName("secp256r1"),
+                ECKind.Secp256k1 => Secp256k1.Curve,
+                ECKind.NistP256 => NistP256.Curve,
                 _ => throw new InvalidEnumArgumentException()
             };
             var dp = new ECDomainParameters(c.Curve, c.G, c.N, c.H, c.GetSeed());
@@ -158,15 +152,15 @@ namespace Netezos.Keys
         static byte[] Bip32Hash(byte[] chainCode, uint index, byte prefix, byte[] data)
         {
             using var hmacSha512 = new HMACSHA512(chainCode);
-            return hmacSha512.ComputeHash(Bytes.Concat(new byte[] { prefix }, data, Ser32(index)));
+            return hmacSha512.ComputeHash(Bytes.Concat([prefix], data, Ser32(index)));
         }
 
-        static byte[] Ser32(uint index) => new byte[]
-        {
+        private static byte[] Ser32(uint index) =>
+        [
             (byte)((index >> 24) & 0xFF),
             (byte)((index >> 16) & 0xFF),
             (byte)((index >> 8) & 0xFF),
             (byte)((index >> 0) & 0xFF)
-        };
+        ];
     }
 }

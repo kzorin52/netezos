@@ -5,7 +5,7 @@ namespace Netezos.Keys
 {
     public class Mnemonic
     {
-        readonly string Sentence;
+        private readonly string Sentence;
 
         public Mnemonic() : this(MnemonicSize.M24) { }
         
@@ -13,12 +13,12 @@ namespace Netezos.Keys
         {
             var entropy = RNG.GetNonZeroBytes((int)size);
             var words = Bip39.GetMnemonic(entropy);
-            Sentence = string.Join(" ", words);
+            Sentence = string.Join(' ', words);
         }
 
         public Mnemonic(string mnemonic) => Sentence = Regex.Replace(mnemonic, @"[\s,;]+", " ");
 
-        public Mnemonic(IEnumerable<string> words) => Sentence = string.Join(" ", words);
+        public Mnemonic(IEnumerable<string> words) => Sentence = string.Join(' ', words);
 
         public byte[] GetSeed() => Bip39.GetSeed(Sentence);
 
